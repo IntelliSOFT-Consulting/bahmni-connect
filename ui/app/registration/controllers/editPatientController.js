@@ -1,18 +1,22 @@
 'use strict';
 
 angular.module('bahmni.registration')
-    .controller('EditPatientController', ['$scope', 'patientService', 'encounterService', '$stateParams', 'openmrsPatientMapper', '$window', '$q', 'spinner', 'appService', 'messagingService', '$rootScope',
-        function ($scope, patientService, encounterService, $stateParams, openmrsPatientMapper, $window, $q, spinner, appService, messagingService, $rootScope) {
+    .controller('EditPatientController', ['$scope', 'patientService', 'encounterService', '$stateParams', 'openmrsPatientMapper',
+        '$window', '$q', 'spinner', 'appService', 'messagingService', '$rootScope',
+        function ($scope, patientService, encounterService, $stateParams, openmrsPatientMapper, $window, $q, spinner,
+                  appService, messagingService, $rootScope) {
             var dateUtil = Bahmni.Common.Util.DateUtil;
             var uuid = $stateParams.patientUuid;
+            var personAttributes = [];
             $scope.patient = {};
             $scope.actions = {};
             $scope.addressHierarchyConfigs = appService.getAppDescriptor().getConfigValue("addressHierarchy");
             $scope.disablePhotoCapture = appService.getAppDescriptor().getConfigValue("disablePhotoCapture");
 
             $scope.today = dateUtil.getDateWithoutTime(dateUtil.now());
+            $scope.patientLoaded = false;
 
-            var setReadOnlyFields = function () {
+            /* var setReadOnlyFields = function () {
                 $scope.readOnlyFields = {};
                 var readOnlyFields = appService.getAppDescriptor().getConfigValue("readOnlyFields");
                 angular.forEach(readOnlyFields, function (readOnlyField) {
@@ -20,12 +24,12 @@ angular.module('bahmni.registration')
                         $scope.readOnlyFields[readOnlyField] = true;
                     }
                 });
-            };
+            }; */
 
             var successCallBack = function (openmrsPatient) {
                 $scope.openMRSPatient = openmrsPatient["patient"];
                 $scope.patient = openmrsPatientMapper.map(openmrsPatient);
-                setReadOnlyFields();
+                // setReadOnlyFields();
                 expandDataFilledSections();
                 $scope.patientLoaded = true;
             };
@@ -35,7 +39,7 @@ angular.module('bahmni.registration')
                     var notNullAttribute = _.find(section && section.attributes, function (attribute) {
                         return $scope.patient[attribute.name] !== undefined;
                     });
-                    section.expand = section.expanded || (notNullAttribute ? true : false);
+                    section.expand = false; // section.expand || (!!notNullAttribute);
                 });
             };
 
@@ -84,9 +88,9 @@ angular.module('bahmni.registration')
                 $scope.patient.relationships = _.concat(newRelationships, $scope.patient.deletedRelationships);
             };
 
-            $scope.isReadOnly = function (field) {
-                return $scope.readOnlyFields ? ($scope.readOnlyFields[field] ? true : false) : undefined;
-            };
+            /* $scope.isReadOnly = function (field) {
+                return $scope.readOnlyFields ? (!!$scope.readOnlyFields[field]) : undefined;
+            }; */
 
             $scope.afterSave = function () {
                 messagingService.showMessage("info", "REGISTRATION_LABEL_SAVED");

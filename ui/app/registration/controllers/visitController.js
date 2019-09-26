@@ -274,6 +274,7 @@ angular.module('bahmni.registration')
                 var visitType = $scope.encounterConfig.getVisitTypeByUuid($scope.visitTypeUuid);
                 $scope.context = {visitType: visitType, patient: $scope.patient};
             };
+
             var getObservationForms = function (extensions, observationsForms) {
                 var forms = [];
                 var observations = $scope.observations || [];

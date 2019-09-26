@@ -17,9 +17,33 @@ angular.module('bahmni.registration')
                 var defaultVisitType = $rootScope.regEncounterConfiguration.getDefaultVisitType(loginLocationUuid);
                 defaultVisitType = defaultVisitType ? defaultVisitType : appService.getAppDescriptor().getConfigValue('defaultVisitType');
                 var showStartVisitButton = appService.getAppDescriptor().getConfigValue("showStartVisitButton");
+                var forwardUrlsForVisitTypes = appService.getAppDescriptor().getConfigValue("forwardUrlsForVisitTypes");
                 showStartVisitButton = (_.isUndefined(showStartVisitButton) || _.isNull(showStartVisitButton)) ? true : showStartVisitButton;
                 var isOfflineApp = offlineService.isOfflineApp();
                 var visitLocationUuid = $rootScope.visitLocation;
+                var forwardUrls = forwardUrlsForVisitTypes || false;
+
+                var getForwardUrlEntryForVisitFromTheConfig = function () {
+                    var matchedEntry = _.find(forwardUrls, function (entry) {
+                        if (self.hasActiveVisit) {
+                            return entry.visitType === self.activeVisit.visitType.name;
+                        }
+                        return entry.visitType === $scope.visitControl.selectedVisitType.name;
+                    });
+                    return matchedEntry;
+                };
+
+                var keyForActiveVisitEntry = function () {
+                    var matchedEntry = getForwardUrlEntryForVisitFromTheConfig();
+                    if (matchedEntry) {
+                        $scope.activeVisitConfig = matchedEntry;
+                        if (_.isEmpty(_.get($scope.activeVisitConfig, 'translationKey'))) {
+                            $scope.activeVisitConfig.translationKey = "REGISTRATION_LABEL_ENTER_VISIT";
+                            $scope.activeVisitConfig.shortcutKey = "REGISTRATION_ENTER_VISIT_DETAILS_ACCESS_KEY";
+                        }
+                        return 'forwardAction';
+                    }
+                };
 
                 function setForwardActionKey () {
                     if (editActionsConfig.length === 0 && isOfflineApp) {
@@ -74,11 +98,20 @@ angular.module('bahmni.registration')
                     return showStartVisitButton;
                 };
 
+                var goToForwardUrlPage = function (patientData) {
+                    var forwardUrl = appService.getAppDescriptor().formatUrl($scope.activeVisitConfig.forwardUrl, {'patientUuid': patientData.patient.uuid});
+                    $window.location.href = forwardUrl;
+                };
+
                 $scope.actions.followUpAction = function (patientProfileData) {
                     messagingService.clearAll();
                     switch ($scope.actions.submitSource) {
                     case 'startVisit':
-                        return createVisit(patientProfileData);
+                        var entry = getForwardUrlEntryForVisitFromTheConfig();
+                        var forwardUrl = entry ? entry.forwardUrl : undefined;
+                        return createVisit(patientProfileData, forwardUrl);
+                    case 'forwardAction':
+                        return goToForwardUrlPage(patientProfileData);
                     case 'enterVisitDetails':
                         return goToVisitPage(patientProfileData);
                     case 'configAction':
@@ -116,7 +149,8 @@ angular.module('bahmni.registration')
                     }
                     spinner.forPromise($scope.visitControl.createVisitOnly(patientProfileData.patient.uuid, $rootScope.visitLocation).then(function () {
                         if (forwardUrl) {
-                            $window.location.href = forwardUrl;
+                            var updatedForwardUrl = appService.getAppDescriptor().formatUrl(forwardUrl, {'patientUuid': patientProfileData.patient.uuid});
+                            $window.location.href = updatedForwardUrl;
                         } else {
                             goToVisitPage(patientProfileData);
                         }
