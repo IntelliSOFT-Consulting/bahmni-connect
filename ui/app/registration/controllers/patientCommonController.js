@@ -7,6 +7,7 @@ angular.module('bahmni.registration')
             var showCasteSameAsLastNameCheckbox = appService.getAppDescriptor().getConfigValue("showCasteSameAsLastNameCheckbox");
             var personAttributes = [];
             var caste;
+
             $scope.showMiddleName = appService.getAppDescriptor().getConfigValue("showMiddleName");
             $scope.showLastName = appService.getAppDescriptor().getConfigValue("showLastName");
             $scope.isLastNameMandatory = $scope.showLastName && appService.getAppDescriptor().getConfigValue("isLastNameMandatory");
@@ -17,9 +18,13 @@ angular.module('bahmni.registration')
             $scope.readOnlyExtraIdentifiers = appService.getAppDescriptor().getConfigValue("readOnlyExtraIdentifiers");
             $scope.showSaveConfirmDialogConfig = appService.getAppDescriptor().getConfigValue("showSaveConfirmDialog");
             $scope.showSaveAndContinueButton = false;
+            $scope.fieldValidation = appService.getAppDescriptor().getConfigValue("fieldValidation") || {};
+
+            $scope.heiRelationship = false;
+            $scope.infantPatient = false;
+            $scope.walkInPatientType = false;
 
             var dontSaveButtonClicked = false;
-
             var isHref = false;
 
             $rootScope.onHomeNavigate = function (event) {
@@ -67,57 +72,17 @@ angular.module('bahmni.registration')
                 stateChangeListener();
             });
 
-            $scope.getDeathConcepts = function () {
-                return $http({
-                    url: Bahmni.Common.Constants.globalPropertyUrl,
-                    method: 'GET',
-                    params: {
-                        property: 'concept.reasonForDeath'
-                    },
-                    withCredentials: true,
-                    transformResponse: [function (deathConcept) {
-                        if (_.isEmpty(deathConcept)) {
-                            $scope.deathConceptExists = false;
-                        } else {
-                            $http.get(Bahmni.Common.Constants.conceptSearchByFullNameUrl, {
-                                params: {
-                                    name: deathConcept,
-                                    v: "custom:(uuid,name,set,setMembers:(uuid,display,name:(uuid,name),retired))"
-                                },
-                                withCredentials: true
-                            }).then(function (results) {
-                                $scope.deathConceptExists = !!results.data.results.length;
-                                $scope.deathConcepts = results.data.results[0] ? results.data.results[0].setMembers : [];
-                                $scope.deathConcepts = filterRetireDeathConcepts($scope.deathConcepts);
-                            });
-                        }
-                    }]
-                });
-            };
-            spinner.forPromise($scope.getDeathConcepts());
-            var filterRetireDeathConcepts = function (deathConcepts) {
-                return _.filter(deathConcepts, function (concept) {
-                    return !concept.retired;
-                });
-            };
-
             $scope.isAutoComplete = function (fieldName) {
                 return !_.isEmpty(autoCompleteFields) ? autoCompleteFields.indexOf(fieldName) > -1 : false;
             };
 
-            $scope.showCasteSameAsLastName = function () {
-                personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
-                    return attribute.name.toLowerCase();
-                });
-                var personAttributeHasCaste = personAttributes.indexOf("caste") !== -1;
-                caste = personAttributeHasCaste ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("caste")].name : undefined;
-                return showCasteSameAsLastNameCheckbox && personAttributeHasCaste;
-            };
+            $scope.isReadOnly = function (fieldName) {
+                var readOnlyPatientAttributes = ["HealthFacilityName", "TodaysDate", "RegistrantName", "UniqueArtNo", "TypeofPatient"];
 
-            $scope.setCasteAsLastName = function () {
-                if ($scope.patient.sameAsLastName) {
-                    $scope.patient[caste] = $scope.patient.familyName;
+                if (!$scope.patientLoaded) {
+                    readOnlyPatientAttributes = [];
                 }
+                return readOnlyPatientAttributes.indexOf(fieldName) > -1 || false;
             };
 
             var showSections = function (sectionsToShow, allSections) {
@@ -145,6 +110,95 @@ angular.module('bahmni.registration')
                 if (ruleFunction) {
                     executeRule(ruleFunction);
                 }
+                if (attribute === 'birthdate' || attribute === 'age') {
+                    $scope.infantPatient = false;
+                    disableFieldsForInfant();
+                }
+                if (!$scope.patientLoaded && attribute === "TypeofPatient") {
+                    $scope.heiRelationship = false;
+                    $scope.walkInPatientType = false;
+                    if (personAttributes.length == 0) {
+                        personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
+                            return attribute.name;
+                        });
+                    }
+                    var personAttributeHasTypeofPatient = personAttributes.indexOf("TypeofPatient") !== -1;
+                    var personAttributeTypeofPatient = personAttributeHasTypeofPatient
+                        ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("TypeofPatient")].name : undefined;
+                    if (personAttributeTypeofPatient &&
+                        $scope.patient[personAttributeTypeofPatient] && $scope.patient[personAttributeTypeofPatient].value === "Walk-In") {
+                        $scope.walkInPatientType = true;
+                        var attrElement = angular.element(document.getElementById("UniqueArtNo"));
+                        if (attrElement) {
+                            attrElement.attr('required', false);
+                        }
+                        for (var i = 0; i < personAttributes.length; ++i) {
+                            var attrName = personAttributes[i];
+                            if (attrName !== "TypeofPatient" && attrName !== "UniqueArtNo") {
+                                var attrElement = angular.element(document.getElementById(attrName));
+                                if (attrElement) {
+                                    attrElement.attr('disabled', true);
+                                }
+                            } else if (attrName === "UniqueArtNo") {
+                                var attrElement = angular.element(document.getElementById(attrName));
+                                if (attrElement) {
+                                    attrElement.attr('disabled', false);
+                                }
+                            }
+                        }
+                    } else if (personAttributeTypeofPatient &&
+                        $scope.patient[personAttributeTypeofPatient] && $scope.patient[personAttributeTypeofPatient].value === "HeiRelationship") {
+                        $scope.heiRelationship = true;
+                        for (var i = 0; i < personAttributes.length; ++i) {
+                            var attrName = personAttributes[i];
+                            if (attrName === "UniqueArtNo") {
+                                var attrElement = angular.element(document.getElementById(attrName));
+                                if (attrElement) {
+                                    attrElement.attr('disabled', true);
+                                }
+                            } else {
+                                var attrElement = angular.element(document.getElementById(attrName));
+                                if (attrElement) {
+                                    attrElement.attr('disabled', false);
+                                }
+                            }
+                        }
+                    } else if (personAttributeTypeofPatient &&
+                        $scope.patient[personAttributeTypeofPatient] && $scope.patient[personAttributeTypeofPatient].value === "NewPatient") {
+                        for (var i = 0; i < personAttributes.length; ++i) {
+                            var attrName = personAttributes[i];
+                            if (attrName !== "TypeofPatient" && attrName !== "UniqueArtNo" && attrName !== "HIVExposedInfant(HEI)No") {
+                                var attrElement = angular.element(document.getElementById(attrName));
+                                if (attrElement) {
+                                    attrElement.attr('disabled', false);
+                                }
+                            } else if (attrName === "UniqueArtNo" || attrName === "HIVExposedInfant(HEI)No") {
+                                var attrElement = angular.element(document.getElementById(attrName));
+                                if (attrElement) {
+                                    attrElement.attr('disabled', true);
+                                }
+                            }
+                        }
+                    }
+                    if (personAttributeTypeofPatient && ($scope.patient[personAttributeTypeofPatient].value === "Transfer-In" ||
+                                $scope.patient[personAttributeTypeofPatient].value === "ExistingPatient")) {
+                        for (var i = 0; i < personAttributes.length; ++i) {
+                            var attrName = personAttributes[i];
+                            if (attrName === "HIVExposedInfant(HEI)No") {
+                                var attrElement = angular.element(document.getElementById(attrName));
+                                if (attrElement) {
+                                    attrElement.attr('disabled', true);
+                                }
+                            } else {
+                                var attrElement = angular.element(document.getElementById(attrName));
+                                if (attrElement) {
+                                    attrElement.attr('disabled', false);
+                                }
+                            }
+                        }
+                    }
+                    toggleHeiAddressFields();
+                }
             };
 
             var executeShowOrHideRules = function () {
@@ -153,11 +207,83 @@ angular.module('bahmni.registration')
                 });
             };
 
+            var setReadOnlyFields = function () {
+                if (personAttributes.length == 0) {
+                    personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
+                        return attribute.name;
+                    });
+                }
+                var personAttributeHasTypeofPatient = personAttributes.indexOf("TypeofPatient") !== -1;
+                var personAttributeTypeofPatient = personAttributeHasTypeofPatient
+                    ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("TypeofPatient")].name : undefined;
+                if (personAttributeTypeofPatient && $scope.patient[personAttributeTypeofPatient] &&
+                        $scope.patient[personAttributeTypeofPatient].value === "Walk-In") {
+                    for (var i = 0; i < personAttributes.length; i++) {
+                        var attrName = personAttributes[i];
+                        var attrElement = angular.element(document.getElementById(attrName));
+                        if (attrElement) {
+                            attrElement.attr('disabled', true);
+                        }
+                    }
+                } else {
+                    var readOnlyPatientAttributes = ["HealthFacilityName", "TodaysDate", "RegistrantName", "UniqueArtNo", "TypeofPatient"];
+                    for (var i = 0; i < readOnlyPatientAttributes.length; i++) {
+                        var attrName = readOnlyPatientAttributes[i];
+                        var attrElement = angular.element(document.getElementById(attrName));
+                        if (attrElement) {
+                            attrElement.attr('disabled', true);
+                        }
+                    }
+                }
+            };
+
+            var toggleHeiAddressFields = function () {
+                var heiAddressFields = ["cityVillage", "postalCode", "stateProvince"];
+                for (var i = 0; i < heiAddressFields.length; i++) {
+                    var attrName = heiAddressFields[i];
+                    var attrElement = angular.element(document.getElementById(attrName + "_fld"));
+                    if (attrElement) {
+                        attrElement.css('display', $scope.heiRelationship ? 'block' : 'none');
+                    }
+                }
+            };
+
             $scope.$watch('patientLoaded', function () {
                 if ($scope.patientLoaded) {
+                    $scope.patient.birthdate = moment($scope.patient.birthdate).format('DD-MM-YYYY');
                     executeShowOrHideRules();
+                    $scope.walkInPatientType = false;
+                    if ($scope.patient['TypeofPatient'] && $scope.patient['TypeofPatient'].value === "HeiRelationship") {
+                        $scope.heiRelationship = true;
+                    } else if ($scope.patient['TypeofPatient'] && $scope.patient['TypeofPatient'].value === "Walk-In") {
+                        $scope.walkInPatientType = true;
+                    }
+                    disableFieldsForInfant();
+                    setReadOnlyFields();
+                    toggleHeiAddressFields();
                 }
             });
+
+            var disableFieldsForInfant = function () {
+                if (personAttributes.length == 0) {
+                    personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
+                        return attribute.name;
+                    });
+                }
+                if (($scope.patient.age.years === 0 && $scope.patient.age.months <= 12) ||
+                    ($scope.patient.age.years === 1 && $scope.patient.age.months <= 6)) {
+                    $scope.infantPatient = true;
+                }
+                for (var i = 0; i < personAttributes.length; ++i) {
+                    var attrName = personAttributes[i];
+                    if (attrName === "MaritalStatus") {
+                        var attrElement = angular.element(document.getElementById(attrName));
+                        if (attrElement) {
+                            attrElement.attr('disabled', $scope.infantPatient);
+                        }
+                    }
+                }
+            };
 
             $scope.getAutoCompleteList = function (attributeName, query, type) {
                 return patientAttributeService.search(attributeName, query, type);
@@ -166,27 +292,4 @@ angular.module('bahmni.registration')
             $scope.getDataResults = function (data) {
                 return data.results;
             };
-
-            $scope.$watch('patient.familyName', function () {
-                if ($scope.patient.sameAsLastName) {
-                    $scope.patient[caste] = $scope.patient.familyName;
-                }
-            });
-
-            $scope.$watch('patient.caste', function () {
-                if ($scope.patient.sameAsLastName && ($scope.patient.familyName !== $scope.patient[caste])) {
-                    $scope.patient.sameAsLastName = false;
-                }
-            });
-
-            $scope.selectIsDead = function () {
-                if ($scope.patient.causeOfDeath || $scope.patient.deathDate) {
-                    $scope.patient.dead = true;
-                }
-            };
-
-            $scope.disableIsDead = function () {
-                return ($scope.patient.causeOfDeath || $scope.patient.deathDate) && $scope.patient.dead;
-            };
         }]);
-
