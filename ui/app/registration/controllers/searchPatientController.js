@@ -73,8 +73,8 @@ angular.module('bahmni.registration')
                         .then(function () {
                             searching = false;
                             if (response.pageOfResults && response.pageOfResults.length > 0) {
-                            $scope.results = response.pageOfResults;
-                            $scope.noResultsMessage = $scope.results.length === 0 ? 'REGISTRATION_NO_RESULTS_FOUND' : null;
+                                $scope.results = response.pageOfResults;
+                                $scope.noResultsMessage = $scope.results.length === 0 ? 'REGISTRATION_NO_RESULTS_FOUND' : null;
                             } else {
                                 $scope.noResultsMessage = $scope.results.length === 0 ? 'REGISTRATION_NO_RESULTS_FOUND' : null;
                             }
@@ -117,9 +117,9 @@ angular.module('bahmni.registration')
                     _.map(data.pageOfResults, function (result) {
                         var promise = getPatientCohortObservations(result).then(function (response) {
                             result.customAttribute = result.customAttribute && JSON.parse(result.customAttribute);
-                                if (!result.customAttribute) {
-                                    result.customAttribute = {};
-                                }
+                            if (!result.customAttribute) {
+                                result.customAttribute = {};
+                            }
                             if ($scope.searchParameters.visitDate) {
                                 result.customAttribute.MaritalStatus = result.MaritalStatus ? result.MaritalStatus : '';
                                 result.customAttribute.UniqueArtNo = result.UniqueArtNo ? result.UniqueArtNo : '';
