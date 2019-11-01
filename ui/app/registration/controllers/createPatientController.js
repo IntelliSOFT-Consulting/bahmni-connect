@@ -169,7 +169,16 @@ angular.module('bahmni.registration')
                             if (personAttributeHealthFacility && $scope.patient[personAttributeHealthFacility] &&
                                     $scope.patient[personAttributeHealthFacility].value === "Juba Teaching Hospital") {
                                 uniqueArtIdentifier = _.padStart(response.data, 8, '0');
-                                uniqueArtIdentifier = "CES/JTH-" + uniqueArtIdentifier;
+
+                                var x = Number(uniqueArtIdentifier);
+                                Number.prototype.pad = function (size) {
+                                    var s = String(this);
+                                    while (s.length < (size || 2)) { s = "0" + s; }
+                                    return s;
+                                };
+                                var preserveIdFrom = x + 5475;
+                                var padPreservedIdFrom = preserveIdFrom.pad(8);
+                                uniqueArtIdentifier = "CES/JTH-" + padPreservedIdFrom;
                             } else if (personAttributeHealthFacility && $scope.patient[personAttributeHealthFacility] &&
                                     $scope.patient[personAttributeHealthFacility].value === "Nimule") {
                                 uniqueArtIdentifier = _.padStart(response.data, 8, '0');
@@ -343,14 +352,14 @@ angular.module('bahmni.registration')
                         ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("HealthFacilityName")].name : undefined;
                     if (personAttributeHealthFacility && $scope.patient[personAttributeHealthFacility] &&
                             $scope.patient[personAttributeHealthFacility].value === "Juba Teaching Hospital") {
-                        var numericPart = uniqueArt.substring(uniqueArt.lastIndexOf("CES/JTH-"));
+                        var numericPart = uniqueArt.substring("CES/JTH-".length);
                         if (uniqueArt && !(uniqueArt.startsWith("CES/JTH-") && uniqueArt.length === 16
                             && numericPart.length === 8 && Number(numericPart) > 0)) {
                             return "Unique art no should be 16 characters starting with CES/JTH-";
                         }
                     } else if (personAttributeHealthFacility && $scope.patient[personAttributeHealthFacility] &&
                             $scope.patient[personAttributeHealthFacility].value === "Nimule") {
-                        var numericPart = uniqueArt.substring(uniqueArt.lastIndexOf("EES/NMC-"));
+                        var numericPart = uniqueArt.substring("EES/NMC-".length);
                         if (uniqueArt && !(uniqueArt.startsWith("EES/NMC-") && uniqueArt.length === 16
                             && numericPart.length === 8 && Number(numericPart) > 0)) {
                             return "Unique art no should be 16 characters starting with EES/NMC-";
