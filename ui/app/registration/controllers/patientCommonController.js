@@ -112,14 +112,14 @@ angular.module('bahmni.registration')
                 if (ruleFunction) {
                     executeRule(ruleFunction);
                 }
-                    if (personAttributes.length == 0) {
-                        personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
-                            return attribute.name;
-                        });
-                    }
-                    var personAttributeHasTypeofPatient = personAttributes.indexOf("TypeofPatient") !== -1;
-                    var personAttributeTypeofPatient = personAttributeHasTypeofPatient
-                        ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("TypeofPatient")].name : undefined;
+                if (personAttributes.length == 0) {
+                    personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
+                        return attribute.name;
+                    });
+                }
+                var personAttributeHasTypeofPatient = personAttributes.indexOf("TypeofPatient") !== -1;
+                var personAttributeTypeofPatient = personAttributeHasTypeofPatient
+                    ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("TypeofPatient")].name : undefined;
                 if (attribute === 'birthdate' || attribute === 'age') {
                     $scope.infantPatient = false;
                     if (personAttributeTypeofPatient &&
