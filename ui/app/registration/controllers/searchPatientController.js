@@ -2,9 +2,9 @@
 
 angular.module('bahmni.registration')
     .controller('SearchPatientController', ['$rootScope', '$scope', '$location', '$window', 'spinner', 'patientService', 'appService',
-        'messagingService', '$translate', '$filter', 'observationsService', '$q', 'visitService',
+        'messagingService', '$translate', '$filter', 'observationsService', '$q', 'visitService', '$bahmniCookieStore',
         function ($rootScope, $scope, $location, $window, spinner, patientService, appService,
-            messagingService, $translate, $filter, observationsService, $q, visitService) {
+            messagingService, $translate, $filter, observationsService, $q, visitService, $bahmniCookieStore) {
             $scope.results = [];
             $scope.extraIdentifierTypes = _.filter($rootScope.patientConfiguration.identifierTypes, function (identifierType) {
                 return !identifierType.primary;
@@ -167,7 +167,7 @@ angular.module('bahmni.registration')
             };
 
             var mapVisitDateOfSearchResults = function (data) {
-                var visitLocationUuid = $rootScope.visitLocation;
+                var visitLocationUuid = $bahmniCookieStore.get(Bahmni.Common.Constants.locationCookieName).uuid;
                 if ($scope.searchParameters.visitDate) {
                     return;
                 }
@@ -175,7 +175,7 @@ angular.module('bahmni.registration')
                 _.map(data.pageOfResults, function (result) {
                     var searchParams = {
                         patient: result.uuid,
-                        includeInactive: true,
+                        includeInactive: false,
                         v: "full"
                     };
                     var promise = visitService.search(searchParams).then(function (response) {
@@ -310,13 +310,15 @@ angular.module('bahmni.registration')
                 /* $location.search({
                     registrationNumber: $scope.searchParameters.registrationNumber,
                     name: $scope.searchParameters.name
-                }); */
+                });
+                visit_location_uuid: $rootScope.visitLocation,
+                */
                 $scope.results = [];
 
                 var patientVisitStartDate = '';
                 var params = { q: 'emrapi.sqlSearch.registrationPatientsSeachOnVisitDate', v: "full",
                     startIndex: offset || 0,
-                    location_uuid: $rootScope.visitLocation,
+                    visit_location_uuid: $bahmniCookieStore.get(Bahmni.Common.Constants.locationCookieName).uuid,
                     provider_uuid: $rootScope.currentProvider.uuid
                 };
                 if ($scope.searchParameters.visitDate) {
@@ -324,9 +326,10 @@ angular.module('bahmni.registration')
                     patientVisitStartDate = moment(d).format("YYYY-MM-DD");
                 }
                 params["patient_visit_start_date"] = patientVisitStartDate;
-                var searchPromise = patientService.findPatients(params).then(function (response) {
-                    var data = {};
-                    data.pageOfResults = response && response.data ? response.data : undefined;
+                params["patientAttributes"] = "UniqueArtNo,MaritalStatus";
+                var searchPromise = patientService.findPatients(params).then(function (data) {
+                    // var data = {};
+                    // data.pageOfResults = response && response.data ? response.data.pageOfResults : undefined;
                     if (!data.pageOfResults) {
                         $scope.noResultsMessage = 'REGISTRATION_NO_RESULTS_FOUND';
                         return;
