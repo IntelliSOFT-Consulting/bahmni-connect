@@ -163,10 +163,15 @@ angular.module('bahmni.registration')
         var init = function () {
             $scope.addressLevels.reverse();
             var isStrictEntry = false;
-            _.each($scope.addressLevels, function (addressLevel) {
-                addressLevel.isStrictEntry = $scope.strictAutocompleteFromLevel == addressLevel.addressField || isStrictEntry;
-                isStrictEntry = addressLevel.isStrictEntry;
+            angular.forEach($scope.addressLevels, function (value, key) {
+                console.log("value", value);
+                value.isStrictEntry = $scope.strictAutocompleteFromLevel == value.addressField || isStrictEntry;
+                isStrictEntry = value.isStrictEntry;
             });
+            // _.each($scope.addressLevels, function (addressLevel) {
+            //     addressLevel.isStrictEntry = $scope.strictAutocompleteFromLevel == addressLevel.addressField || isStrictEntry;
+            //     isStrictEntry = addressLevel.isStrictEntry;
+            // });
             $scope.addressLevels.reverse();
 
             // wait for address to be resolved in edit patient scenario
