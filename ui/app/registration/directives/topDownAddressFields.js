@@ -20,7 +20,7 @@ angular.module('bahmni.registration')
         var selectedUserGeneratedIds = {};
 
         var addressLevelsCloneInDescendingOrder = $scope.addressLevels.slice(0).reverse();
-        var newAddress = new Array($scope.addressLevels.length).fill(undefined);
+        var newAddress = new Array($scope.addressLevels.length); // .fill(undefined);
         angular.forEach($scope.addressLevels, function (value, key) {
             value.isStrictEntry = false;
             if (value.addressField === "address1") {

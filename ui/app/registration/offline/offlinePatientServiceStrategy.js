@@ -8,8 +8,15 @@ angular.module('bahmni.registration')
                     offlineDbService = androidDbService;
                 }
             }
+
             var search = function (config) {
                 return offlinePatientServiceStrategy.search(config).then(function (results) {
+                    return results.data;
+                });
+            };
+
+            var findPatients = function (params) {
+                return offlinePatientServiceStrategy.findPatients(params).then(function (results) {
                     return results.data;
                 });
             };
@@ -138,6 +145,7 @@ angular.module('bahmni.registration')
                 get: get,
                 create: create,
                 update: update,
-                generateIdentifier: generateIdentifier
+                generateIdentifier: generateIdentifier,
+                findPatients: findPatients
             };
         }]);

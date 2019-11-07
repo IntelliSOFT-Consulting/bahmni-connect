@@ -84,11 +84,7 @@ angular.module('bahmni.registration')
         };
 
         var findPatients = function (params) {
-            return $http.get(Bahmni.Common.Constants.sqlUrl, {
-                method: "GET",
-                params: params,
-                withCredentials: true
-            });
+            return patientServiceStrategy.findPatients(params);
         };
 
         return {

@@ -6,6 +6,10 @@ angular.module('bahmni.registration')
             return $q.when(JSON.parse(AndroidOfflineService.search(JSON.stringify(config.params))));
         };
 
+        var findPatients = function (params) {
+            return $q.when(JSON.parse(AndroidOfflineService.findPatients(JSON.stringify(params))));
+        };
+
         var getByUuid = function (uuid) {
             return androidDbService.getPatientByUuid(uuid);
         };
@@ -27,6 +31,7 @@ angular.module('bahmni.registration')
             get: getByUuid,
             create: create,
             deletePatientData: deletePatientData,
-            getAttributeTypes: getAttributeTypes
+            getAttributeTypes: getAttributeTypes,
+            findPatients: findPatients
         };
     }]);

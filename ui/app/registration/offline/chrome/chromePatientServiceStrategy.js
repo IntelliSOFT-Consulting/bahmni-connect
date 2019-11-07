@@ -6,6 +6,10 @@ angular.module('bahmni.registration')
             return offlineSearchDbService.search(config.params);
         };
 
+        var findPatients = function (params) {
+            return offlineSearchDbService.findPatients(params);
+        };
+
         var getByUuid = function (uuid) {
             return offlineDbService.getPatientByUuid(uuid);
         };
@@ -27,6 +31,7 @@ angular.module('bahmni.registration')
             get: getByUuid,
             create: create,
             deletePatientData: deletePatientData,
-            getAttributeTypes: getAttributeTypes
+            getAttributeTypes: getAttributeTypes,
+            findPatients: findPatients
         };
     }]);

@@ -21,6 +21,14 @@ angular.module('bahmni.registration')
             return defer.promise;
         };
 
+        var findPatients = function (params) {
+            return $http.get(Bahmni.Common.Constants.sqlUrl, {
+                method: "GET",
+                params: params,
+                withCredentials: true
+            });
+        };
+
         var getByUuid = function (uuid) {
             var url = openmrsUrl + "/ws/rest/v1/patientprofile/" + uuid;
             var config = {
@@ -76,6 +84,7 @@ angular.module('bahmni.registration')
             get: getByUuid,
             create: create,
             update: update,
-            generateIdentifier: generateIdentifier
+            generateIdentifier: generateIdentifier,
+            findPatients: findPatients
         };
     }]);
