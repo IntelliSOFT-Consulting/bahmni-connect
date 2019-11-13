@@ -22,6 +22,12 @@ angular.module('bahmni.registration')
 
             $scope.today = moment(Bahmni.Common.Util.DateUtil.now()).format('DD-MM-YYYY');
 
+            if (personAttributes.length == 0) {
+                personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
+                    return attribute.name;
+                });
+            }
+
             $scope.heiRelationship = false;
             $scope.infantPatient = false;
             $scope.walkInPatientType = false;
@@ -80,7 +86,6 @@ angular.module('bahmni.registration')
 
             $scope.isReadOnly = function (fieldName) {
                 var readOnlyPatientAttributes = ["HealthFacilityName", "TodaysDate", "RegistrantName", "UniqueArtNo", "TypeofPatient", "HIVExposedInfant(HEI)No"];
-
                 if (!$scope.patientLoaded) {
                     readOnlyPatientAttributes = [];
                 }
@@ -112,27 +117,19 @@ angular.module('bahmni.registration')
                 if (ruleFunction) {
                     executeRule(ruleFunction);
                 }
-                if (personAttributes.length == 0) {
-                    personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
-                        return attribute.name;
-                    });
-                }
-                var personAttributeHasTypeofPatient = personAttributes.indexOf("TypeofPatient") !== -1;
-                var personAttributeTypeofPatient = personAttributeHasTypeofPatient
-                    ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("TypeofPatient")].name : undefined;
+                var personAttributeTypeofPatientVal = getPersonAttributeVal('TypeofPatient');
                 if (attribute === 'birthdate' || attribute === 'age') {
                     $scope.infantPatient = false;
-                    if (personAttributeTypeofPatient &&
-                        ($scope.patient[personAttributeTypeofPatient] && $scope.patient[personAttributeTypeofPatient].value === "HeiRelationship"
-                        || $scope.patient[personAttributeTypeofPatient] && $scope.patient[personAttributeTypeofPatient].value === "ExistingHeiRelationship")) {
+                    if (personAttributeTypeofPatientVal &&
+                        (personAttributeTypeofPatientVal === "HeiRelationship"
+                        || personAttributeTypeofPatientVal === "ExistingHeiRelationship")) {
                         disableFieldsForInfant();
                     }
                 }
                 if (!$scope.patientLoaded && attribute === "TypeofPatient") {
                     $scope.heiRelationship = false;
                     $scope.walkInPatientType = false;
-                    if (personAttributeTypeofPatient &&
-                        $scope.patient[personAttributeTypeofPatient] && $scope.patient[personAttributeTypeofPatient].value === "Walk-In") {
+                    if (personAttributeTypeofPatientVal && personAttributeTypeofPatientVal === "Walk-In") {
                         $scope.walkInPatientType = true;
                         var attrElement = angular.element(document.getElementById("UniqueArtNo"));
                         if (attrElement) {
@@ -152,18 +149,17 @@ angular.module('bahmni.registration')
                                 }
                             }
                         }
-                    } else if (personAttributeTypeofPatient &&
-                        $scope.patient[personAttributeTypeofPatient] && ($scope.patient[personAttributeTypeofPatient].value === "HeiRelationship"
-                        || $scope.patient[personAttributeTypeofPatient].value === "ExistingHeiRelationship")) {
+                    } else if (personAttributeTypeofPatientVal &&
+                            (personAttributeTypeofPatientVal === "HeiRelationship" || personAttributeTypeofPatientVal === "ExistingHeiRelationship")) {
                         $scope.heiRelationship = true;
                         for (var i = 0; i < personAttributes.length; ++i) {
                             var attrName = personAttributes[i];
-                            if ((attrName === "UniqueArtNo" || attrName === "HIVExposedInfant(HEI)No") && $scope.patient[personAttributeTypeofPatient].value === "HeiRelationship") {
+                            if ((attrName === "UniqueArtNo" || attrName === "HIVExposedInfant(HEI)No") && personAttributeTypeofPatientVal === "HeiRelationship") {
                                 var attrElement = angular.element(document.getElementById(attrName));
                                 if (attrElement) {
                                     attrElement.attr('disabled', true);
                                 }
-                            } else if (attrName === "UniqueArtNo" && $scope.patient[personAttributeTypeofPatient].value === "ExistingHeiRelationship") {
+                            } else if (attrName === "UniqueArtNo" && personAttributeTypeofPatientVal === "ExistingHeiRelationship") {
                                 var attrElement = angular.element(document.getElementById(attrName));
                                 if (attrElement) {
                                     attrElement.attr('disabled', true);
@@ -175,8 +171,8 @@ angular.module('bahmni.registration')
                                 }
                             }
                         }
-                    } else if (personAttributeTypeofPatient &&
-                        $scope.patient[personAttributeTypeofPatient] && $scope.patient[personAttributeTypeofPatient].value === "NewPatient") {
+                    } else if (personAttributeTypeofPatientVal &&
+                            personAttributeTypeofPatientVal === "NewPatient") {
                         for (var i = 0; i < personAttributes.length; ++i) {
                             var attrName = personAttributes[i];
                             if (attrName !== "TypeofPatient" && attrName !== "UniqueArtNo" && attrName !== "HIVExposedInfant(HEI)No") {
@@ -192,8 +188,8 @@ angular.module('bahmni.registration')
                             }
                         }
                     }
-                    if (personAttributeTypeofPatient && ($scope.patient[personAttributeTypeofPatient].value === "Transfer-In" ||
-                                $scope.patient[personAttributeTypeofPatient].value === "ExistingPatient")) {
+                    if (personAttributeTypeofPatientVal && (personAttributeTypeofPatientVal === "Transfer-In" ||
+                            personAttributeTypeofPatientVal === "ExistingPatient")) {
                         for (var i = 0; i < personAttributes.length; ++i) {
                             var attrName = personAttributes[i];
                             if (attrName === "HIVExposedInfant(HEI)No") {
@@ -220,16 +216,8 @@ angular.module('bahmni.registration')
             };
 
             var setReadOnlyFields = function () {
-                if (personAttributes.length == 0) {
-                    personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
-                        return attribute.name;
-                    });
-                }
-                var personAttributeHasTypeofPatient = personAttributes.indexOf("TypeofPatient") !== -1;
-                var personAttributeTypeofPatient = personAttributeHasTypeofPatient
-                    ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("TypeofPatient")].name : undefined;
-                if (personAttributeTypeofPatient && $scope.patient[personAttributeTypeofPatient] &&
-                        $scope.patient[personAttributeTypeofPatient].value === "Walk-In") {
+                var personAttributeTypeofPatientVal = getPersonAttributeVal('TypeofPatient');
+                if (personAttributeTypeofPatientVal && personAttributeTypeofPatientVal === "Walk-In") {
                     for (var i = 0; i < personAttributes.length; i++) {
                         var attrName = personAttributes[i];
                         var attrElement = angular.element(document.getElementById(attrName));
@@ -265,38 +253,54 @@ angular.module('bahmni.registration')
                     $scope.patient.birthdate = moment($scope.patient.birthdate).format('DD-MM-YYYY');
                     executeShowOrHideRules();
                     $scope.walkInPatientType = false;
-                    if ($scope.patient['TypeofPatient'] && ($scope.patient['TypeofPatient'].value === "HeiRelationship" ||
-                        $scope.patient['TypeofPatient'].value === "ExistingHeiRelationship")) {
+                    var personAttributeTypeofPatientVal = getPersonAttributeVal('TypeofPatient');
+                    if (personAttributeTypeofPatientVal && (personAttributeTypeofPatientVal === "HeiRelationship" ||
+                            personAttributeTypeofPatientVal === "ExistingHeiRelationship")) {
                         $scope.heiRelationship = true;
-                        disableFieldsForInfant();
-                    } else if ($scope.patient['TypeofPatient'] && $scope.patient['TypeofPatient'].value === "Walk-In") {
+                    } else if (personAttributeTypeofPatientVal && personAttributeTypeofPatientVal === "Walk-In") {
                         $scope.walkInPatientType = true;
                     }
                     toggleHeiAddressFields();
                     setReadOnlyFields();
+                    disableFieldsForInfant();
                 }
             });
 
             var disableFieldsForInfant = function () {
-                if (personAttributes.length == 0) {
-                    personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
-                        return attribute.name;
-                    });
-                }
                 if (($scope.patient.age.years === 0 && $scope.patient.age.months <= 12) ||
                     ($scope.patient.age.years === 1 && $scope.patient.age.months <= 6)) {
                     $scope.infantPatient = true;
                 }
-                for (var i = 0; i < personAttributes.length; ++i) {
-                    var attrName = personAttributes[i];
-                    if (attrName === "MaritalStatus") {
-                        var attrElement = angular.element(document.getElementById(attrName));
-                        if (attrElement) {
-                            attrElement.attr('disabled', $scope.infantPatient);
-                        }
-                        break;
-                    }
+                var attrName = "MaritalStatus";
+                var attrElement = angular.element(document.getElementById(attrName));
+                if (attrElement) {
+                    attrElement.attr('disabled', $scope.infantPatient);
                 }
+            };
+
+            var getPersonAttributeVal = function (attributeName) {
+                var attributeVal;
+                var pattributeValue = $scope.patient[attributeName]; // && $scope.patient[attributeName].value;
+                if (typeof (pattributeValue) == "object") {
+                    attributeVal = pattributeValue.value.fullySpecifiedName;
+                } else {
+                    attributeVal = pattributeValue;
+                }
+                var personAttributeVal;
+                if ($scope.patientLoaded) {
+                    var attributeType = _.filter($rootScope.patientConfiguration.attributeTypes, function (attributeType) {
+                        if (attributeType.name === attributeName) {
+                            return attributeType;
+                        }
+                    });
+                    var result = _.filter(attributeType[0].answers, function (answer) {
+                        if (answer.conceptId === pattributeValue.conceptUuid) {
+                            return answer;
+                        }
+                    });
+                    personAttributeVal = result && result[0] && result[0].fullySpecifiedName;
+                }
+                return $scope.patientLoaded && personAttributeVal ? personAttributeVal : attributeVal;
             };
 
             $scope.getAutoCompleteList = function (attributeName, query, type) {

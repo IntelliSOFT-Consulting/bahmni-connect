@@ -120,10 +120,10 @@ angular.module('bahmni.registration')
                             if (!result.customAttribute) {
                                 result.customAttribute = {};
                             }
-                            if ($scope.searchParameters.visitDate) {
+                            /* if ($scope.searchParameters.visitDate) {
                                 result.customAttribute.MaritalStatus = result.MaritalStatus ? result.MaritalStatus : '';
                                 result.customAttribute.UniqueArtNo = result.UniqueArtNo ? result.UniqueArtNo : '';
-                            }
+                            } */
                             if (response && response.data && response.data.length && response.data[0].value) {
                                 result.customAttribute.Cohort = response.data[0].value;
                             }
@@ -180,15 +180,15 @@ angular.module('bahmni.registration')
                     };
                     var promise = visitService.search(searchParams).then(function (response) {
                         var results = response.data.results;
-                        var activeVisitForCurrentLoginLocation;
+                        var visitForCurrentLoginLocation;
                         if (results) {
-                            activeVisitForCurrentLoginLocation = _.filter(results, function (res) {
+                            visitForCurrentLoginLocation = _.filter(results, function (res) {
                                 return res.location.uuid === visitLocationUuid;
                             });
                         }
-                        var hasVisit = activeVisitForCurrentLoginLocation && (activeVisitForCurrentLoginLocation.length > 0);
+                        var hasVisit = visitForCurrentLoginLocation && visitForCurrentLoginLocation.length > 0;
                         if (hasVisit) {
-                            var visit = activeVisitForCurrentLoginLocation[0];
+                            var visit = visitForCurrentLoginLocation[0];
                             result.visitDate = visit.startDatetime ? visit.startDatetime : '';
                         }
                     });
