@@ -6,9 +6,10 @@ angular.module('bahmni.common.models')
 
         var fromBirthDate = function (birthDate) {
             var today = dateUtil.now();
-            // birthDate = moment(birthDate, 'DD-MM-YYYY');
+            if (!(birthDate instanceof Date)) {
+                birthDate = moment(birthDate, 'DD-MM-YYYY').toDate();
+            }
             // today = moment(today, 'DD-MM-YYYY').toDate();
-
             var period = dateUtil.diffInYearsMonthsDays(birthDate, today);
             return create(period.years, period.months, period.days);
         };

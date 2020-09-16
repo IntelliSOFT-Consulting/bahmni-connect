@@ -211,69 +211,23 @@ angular.module('bahmni.common.offline')
                         // .leftOuterJoin(pi, lf.op.and(p.uuid.eq(pi.patientUuid), pi.preferred.eq(1)))
                         .leftOuterJoin(pi, p.uuid.eq(pi.patientUuid))
                         .leftOuterJoin(pa, p.uuid.eq(pa.patientUuid))
-                        // .leftOuterJoin(encounter, p.uuid.eq(encounter.patientUuid))
+                        .leftOuterJoin(encounter, p.uuid.eq(encounter.patientUuid))
                         .leftOuterJoin(visit, p.uuid.eq(visit.patientUuid))
                         // .leftOuterJoin(location, location.uuid.eq(visit.locationUuid))
                         .leftOuterJoin(pat, pa.attributeTypeId.eq(pat.attributeTypeId));
 
                     var predicates = [];
-                    if (params.patient_visit_start_date) {
-                        var visitDate = Bahmni.Common.Util.DateUtil.getDate(params.patient_visit_start_date);
-                        var visitPredicate = visit.startDatetime.eq(visitDate);
-                        // var locationPredicate = location.uuid.eq(params.visit_location_uuid);
-                        // predicates.push(lf.op.and(visitPredicate, locationPredicate));
-                        // predicates.push(visitPredicate);
-                    }
-
-                    /* if (!_.isEmpty(params.addressFieldValue)) {
-                        params.addressFieldValue = params.addressFieldValue.replace('%', '.');
-                        predicates.push(padd[addressFieldName].match(new RegExp(params.addressFieldValue, 'i')));
-                    }
-
-                    if (params.duration) {
-                        var startDate = Bahmni.Common.Util.DateUtil.subtractDays(new Date(), params.duration);
-                        var encounterPredicate = encounter.encounterDateTime.gte(startDate);
-                        var dateCreatedPredicate = p.dateCreated.gte(startDate);
-                        predicates.push(lf.op.or(encounterPredicate, dateCreatedPredicate));
-                    }
-
-                    if (!_.isEmpty(params.identifier)) {
-                        params.identifier = params.identifier.replace('%', '.');
-                        predicates.push(pi.identifier.match(new RegExp(params.identifier, 'i')));
-                        predicates.push(pi.identifier.match(new RegExp(params.identifierPrefix, 'i')));
-                    }
-                    if (!_.isEmpty(nameParts)) {
-                        var nameSearchCondition = [];
-                        if (!_.isEmpty(nameParts)) {
-                            angular.forEach(nameParts, function (namePart) {
-                                nameSearchCondition.push(lf.op.or(p.givenName.match(new RegExp(namePart, 'i')), p.middleName.match(new RegExp(namePart, 'i')),
-                                    p.familyName.match(new RegExp(namePart, 'i')), pi.identifier.match(new RegExp(namePart, 'i'))));
-                            });
-                            predicates.push(lf.op.and.apply(null, nameSearchCondition));
-                        }
-                    }
-
-                    if (!_.isEmpty(params.customAttribute)) {
-                        params.customAttribute = params.customAttribute.replace('%', '.');
-                        predicates.push(pa.attributeTypeId.in(_.map(attributeTypeIds, function (attributeTypeId) {
-                            return attributeTypeId.attributeTypeId;
-                        })));
-
-                        predicates.push(pa.attributeValue.match(new RegExp(params.customAttribute, 'i')));
-                    } */
-
                     predicates.push(p.voided.eq(false));
                     var whereCondition = lf.op.and.apply(null, predicates);
-
                     if (!_.isEmpty(predicates)) {
                         query = query.where(whereCondition);
                     }
-
                     query.limit(50).skip(params.startIndex).orderBy(p.dateCreated, lf.Order.DESC).groupBy(p.uuid).exec()
                         .then(function (tempResults) {
+                            var visitDate = Bahmni.Common.Util.DateUtil.getDate(params.patient_visit_start_date);
                             var query = db.select(pi.primaryIdentifier.as('identifier'), pi.extraIdentifiers.as('extraIdentifiers'),
                                 p.givenName.as('givenName'), p.middleName.as('middleName'), p.familyName.as('familyName'),
-                                p.dateCreated.as('dateCreated'), p.birthdate.as('birthdate'), p.gender.as('gender'),
+                                p.dateCreated.as('dateCreated'), p.birthdate.as('birthDate'), p.gender.as('gender'),
                                 p.uuid.as('uuid'), visit.startDatetime.as('visitDate'),
                                 pat.attributeName.as('attributeName'), pa.attributeValue.as('attributeValue'), pat.format.as('attributeFormat'))
                                 .from(p)
@@ -294,14 +248,18 @@ angular.module('bahmni.common.offline')
                                         return res.uuid;
                                     });
                                     var patient;
-
                                     angular.forEach(groupedResults, function (groupedResult) {
                                         var customAttributes = {};
                                         patient = groupedResult[0];
                                         // ToDo:: Dependency of age factory in Admin page
-                                        patient.age = age.fromBirthDate(patient.birthdate).years;
+                                        patient.age = patient.birthDate && age.fromBirthDate(patient.birthDate).years;
                                         patient.image = "../images/blank-user.png";
-
+                                        patient.birthDate = patient.birthDate ? Bahmni.Common.Util.DateUtil.getDate(patient.birthDate) : '';
+                                        var diffInVisitDates = -1;
+                                        if (patient.visitDate) {
+                                            var patientVisitDate = Bahmni.Common.Util.DateUtil.getDate(patient.visitDate);
+                                            diffInVisitDates = Bahmni.Common.Util.DateUtil.diffInDaysRegardlessOfTime(visitDate, patientVisitDate);
+                                        }
                                         angular.forEach(groupedResult, function (result) {
                                             if (result.attributeName) {
                                                 customAttributes[result.attributeName] = result.attributeValue;
@@ -310,10 +268,11 @@ angular.module('bahmni.common.offline')
                                         patient.customAttribute = JSON.stringify(customAttributes);
                                         patient.extraIdentifiers = JSON.stringify(patient.extraIdentifiers);
                                         // patient.addressFieldValue[camelCaseToSnakeCase(addressFieldName)] = patient.addressFieldValue[addressFieldName];
-                                        response.data.pageOfResults.push(patient);
+                                        if (diffInVisitDates == 0) {
+                                            response.data.pageOfResults.push(patient);
+                                        }
                                     });
                                     $rootScope.searching = false;
-
                                     defer.resolve(response);
                                 });
                         }, function (e) {

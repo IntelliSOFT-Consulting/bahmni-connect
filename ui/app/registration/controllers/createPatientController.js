@@ -146,42 +146,40 @@ angular.module('bahmni.registration')
                 $scope.actions.followUpAction(patientProfileData);
             };
 
-            var createPatient = function (jumpAccepted) {
-                if (personAttributes.length == 0) {
-                    personAttributes = _.map($rootScope.patientConfiguration.attributeTypes, function (attribute) {
-                        return attribute.name;
-                    });
+            var getPersonAttributeVal = function (attributeName) {
+                var attributeVal;
+                var pattributeValue = $scope.patient[attributeName] && $scope.patient[attributeName].value;
+                if (typeof (pattributeValue) == "object") {
+                    attributeVal = pattributeValue.fullySpecifiedName;
+                } else {
+                    attributeVal = pattributeValue;
                 }
-                var personAttributeHasTypeofPatient = personAttributes.indexOf("TypeofPatient") !== -1;
-                var personAttributeTypeofPatient = personAttributeHasTypeofPatient
-                    ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("TypeofPatient")].name : undefined;
-                if (personAttributeTypeofPatient && $scope.patient[personAttributeTypeofPatient] &&
-                    ($scope.patient[personAttributeTypeofPatient].value === "NewPatient")) {
+                return attributeVal;
+            };
+
+            var createPatient = function (jumpAccepted) {
+                var personAttributeTypeofPatientVal = getPersonAttributeVal('TypeofPatient');
+                var personAttributeHealthFacilityNameVal = getPersonAttributeVal('HealthFacilityName');
+                if (personAttributeTypeofPatientVal && personAttributeTypeofPatientVal === "NewPatient") {
                     var idgenPrefix = {};
                     idgenPrefix.identifierPrefix = {};
-                    idgenPrefix.identifierPrefix.prefix = "UID";
+                    idgenPrefix.identifierPrefix.prefix = "";
                     return spinner.forPromise(patientService.generateIdentifier(idgenPrefix).then(function (response) {
                         var uniqueArtIdentifier = "";
                         if (response && response.data && response.data.length > 0) {
-                            var personAttributeHasHealthFacility = personAttributes.indexOf("HealthFacilityName") !== -1;
-                            var personAttributeHealthFacility = personAttributeHasHealthFacility
-                                ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("HealthFacilityName")].name : undefined;
-                            if (personAttributeHealthFacility && $scope.patient[personAttributeHealthFacility] &&
-                                $scope.patient[personAttributeHealthFacility].value === "Juba Teaching Hospital") {
+                            if (personAttributeHealthFacilityNameVal && personAttributeHealthFacilityNameVal === "Juba Teaching Hospital") {
                                 uniqueArtIdentifier = _.padStart(response.data, 8, '0');
-
-                                var x = Number(uniqueArtIdentifier);
+                                /* var x = Number(uniqueArtIdentifier);
                                 Number.prototype.pad = function (size) {
                                     var s = String(this);
                                     while (s.length < (size || 2)) { s = "0" + s; }
                                     return s;
                                 };
                                 var preserveIdFrom = x + 5875;
-                                var padPreservedIdFrom = preserveIdFrom.pad(8);
-                                uniqueArtIdentifier = "CES/JTH-" + padPreservedIdFrom;
+                                var padPreservedIdFrom = preserveIdFrom.pad(8); */
+                                uniqueArtIdentifier = "CES/JTH-" + uniqueArtIdentifier;
                             }
-                            else if (personAttributeHealthFacility && $scope.patient[personAttributeHealthFacility] &&
-                                $scope.patient[personAttributeHealthFacility].value === "Nimule") {
+                            else if (personAttributeHealthFacilityNameVal && personAttributeHealthFacilityNameVal === "Nimule") {
                                 uniqueArtIdentifier = _.padStart(response.data, 8, '0');
                                 uniqueArtIdentifier = "EES/NMC-" + uniqueArtIdentifier;
                             }
@@ -217,40 +215,31 @@ angular.module('bahmni.registration')
                             }
                         });
                     });
-                } else if (personAttributeTypeofPatient && $scope.patient[personAttributeTypeofPatient] &&
-                    ($scope.patient[personAttributeTypeofPatient].value === "HeiRelationship")) {
+                } else if (personAttributeTypeofPatientVal && personAttributeTypeofPatientVal === "HeiRelationship") {
                     var idgenPrefix = {};
                     idgenPrefix.identifierPrefix = {};
                     idgenPrefix.identifierPrefix.prefix = "HEI";
                     var idgenPatientPrefix = {};
                     idgenPatientPrefix.identifierPrefix = {};
-                    idgenPatientPrefix.identifierPrefix.prefix = "UID";
+                    idgenPatientPrefix.identifierPrefix.prefix = "";
                     return spinner.forPromise(patientService.generateIdentifier(idgenPrefix).then(function (response) {
                         var heiIdentifier = "";
                         if (response && response.data && response.data.length > 0) {
                             response.data = response.data.replace("HEI", "");
                             heiIdentifier = _.padStart(response.data, 4, '0');
                             heiIdentifier = "EXP" + heiIdentifier;
-                            var personAttributeHasHei = personAttributes.indexOf("HIVExposedInfant(HEI)No") !== -1;
-                            var personAttributeHei = personAttributeHasHei
-                                ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("HIVExposedInfant(HEI)No")].name : undefined;
-                            $scope.patient[personAttributeHei] = heiIdentifier;
+                            $scope.patient['HIVExposedInfant(HEI)No'] = heiIdentifier;
                         }
                     })).then(spinner.forPromise(patientService.generateIdentifier(idgenPatientPrefix)
                         .then(function (response) {
                             var uniqueIdentifier = "";
                             if (response && response.data && response.data.length > 0) {
-                                var personAttributeHasHealthFacility = personAttributes.indexOf("HealthFacilityName") !== -1;
-                                var personAttributeHealthFacility = personAttributeHasHealthFacility
-                                    ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("HealthFacilityName")].name : undefined;
-                                if (personAttributeHealthFacility && $scope.patient[personAttributeHealthFacility] &&
-                                    $scope.patient[personAttributeHealthFacility].value === "Juba Teaching Hospital") {
+                                if (personAttributeHealthFacilityNameVal && personAttributeHealthFacilityNameVal === "Juba Teaching Hospital") {
                                     uniqueIdentifier = _.padStart(response.data, 8, '0');
                                     uniqueIdentifier = "CES/JTH-" + uniqueIdentifier;
                                     $scope.patient.primaryIdentifier.identifier = uniqueIdentifier;
                                     $scope.patient.primaryIdentifier.preferred = true;
-                                } else if (personAttributeHealthFacility && $scope.patient[personAttributeHealthFacility] &&
-                                    $scope.patient[personAttributeHealthFacility].value === "Nimule") {
+                                } else if (personAttributeHealthFacilityNameVal && personAttributeHealthFacilityNameVal === "Nimule") {
                                     uniqueIdentifier = _.padStart(response.data, 8, '0');
                                     uniqueIdentifier = "EES/NMC-" + uniqueIdentifier;
                                     $scope.patient.primaryIdentifier.identifier = uniqueIdentifier;
@@ -284,10 +273,8 @@ angular.module('bahmni.registration')
                                 });
                         });
                 } else {
-                    var personAttributeHasUniqueArtNo = personAttributes.indexOf("UniqueArtNo") !== -1;
-                    var personAttributeUniqueArtNo = personAttributeHasUniqueArtNo
-                        ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("UniqueArtNo")].name : undefined;
-                    $scope.patient.primaryIdentifier.identifier = $scope.patient[personAttributeUniqueArtNo] || "";
+                    var personAttributeUniqueArtNoVal = getPersonAttributeVal('UniqueArtNo');
+                    $scope.patient.primaryIdentifier.identifier = personAttributeUniqueArtNoVal || "";
                     $scope.patient.primaryIdentifier.preferred = true;
                     return patientService.create($scope.patient, jumpAccepted).then(function (response) {
                         copyPatientProfileDataToScope(response);
@@ -328,7 +315,7 @@ angular.module('bahmni.registration')
             };
 
             var validateAgeBirthdateForHeiType = function () {
-                var patientType = $scope.patient['TypeofPatient'].value;
+                var patientType = getPersonAttributeVal('TypeofPatient');
                 if (patientType === 'HeiRelationship' || patientType === 'ExistingHeiRelationship') {
                     var ageYr = $scope.patient.age.years;
                     var ageMth = $scope.patient.age.months;
@@ -340,27 +327,17 @@ angular.module('bahmni.registration')
             };
 
             var validateUniqueArtNo = function () {
-                var personAttributeHasTypeofPatient = personAttributes.indexOf("TypeofPatient") !== -1;
-                var personAttributeTypeofPatient = personAttributeHasTypeofPatient
-                    ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("TypeofPatient")].name : undefined;
-                if (personAttributeTypeofPatient && $scope.patient[personAttributeTypeofPatient] &&
-                        ($scope.patient[personAttributeTypeofPatient].value === "ExistingPatient")) {
-                    var personAttributeHasUniqueArtNo = personAttributes.indexOf("UniqueArtNo") !== -1;
-                    var personAttributeUniqueArtNo = personAttributeHasUniqueArtNo
-                        ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("UniqueArtNo")].name : undefined;
-                    var uniqueArt = $scope.patient[personAttributeUniqueArtNo];
-                    var personAttributeHasHealthFacility = personAttributes.indexOf("HealthFacilityName") !== -1;
-                    var personAttributeHealthFacility = personAttributeHasHealthFacility
-                        ? $rootScope.patientConfiguration.attributeTypes[personAttributes.indexOf("HealthFacilityName")].name : undefined;
-                    if (personAttributeHealthFacility && $scope.patient[personAttributeHealthFacility] &&
-                            $scope.patient[personAttributeHealthFacility].value === "Juba Teaching Hospital") {
+                var personAttributeTypeofPatientVal = getPersonAttributeVal('TypeofPatient');
+                var uniqueArt = getPersonAttributeVal('UniqueArtNo');
+                var personAttributeHealthFacilityNameVal = getPersonAttributeVal('HealthFacilityName');
+                if (personAttributeTypeofPatientVal && personAttributeTypeofPatientVal === "ExistingPatient") {
+                    if (personAttributeHealthFacilityNameVal && personAttributeHealthFacilityNameVal === "Juba Teaching Hospital") {
                         var numericPart = uniqueArt.substring("CES/JTH-".length);
                         if (uniqueArt && !(uniqueArt.startsWith("CES/JTH-") && uniqueArt.length === 16
                             && numericPart.length === 8 && Number(numericPart) > 0)) {
                             return "Unique art no should be 16 characters starting with CES/JTH-";
                         }
-                    } else if (personAttributeHealthFacility && $scope.patient[personAttributeHealthFacility] &&
-                            $scope.patient[personAttributeHealthFacility].value === "Nimule") {
+                    } else if (personAttributeHealthFacilityNameVal && personAttributeHealthFacilityNameVal === "Nimule") {
                         var numericPart = uniqueArt.substring("EES/NMC-".length);
                         if (uniqueArt && !(uniqueArt.startsWith("EES/NMC-") && uniqueArt.length === 16
                             && numericPart.length === 8 && Number(numericPart) > 0)) {
